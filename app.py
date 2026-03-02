@@ -4,13 +4,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # --------------------------------------------------
-# Page configuration
+# Page setup
 # --------------------------------------------------
-st.set_page_config(
-    page_title="E-commerce Sales Analysis",
-    layout="wide"
-)
-
+st.set_page_config(page_title="E-commerce Sales Analysis", layout="wide")
 st.title("📊 E-commerce Sales Analysis Dashboard")
 
 # --------------------------------------------------
@@ -23,29 +19,18 @@ def load_data():
     targets = pd.read_csv("Sales target.csv")
     return orders, details, targets
 
-orders, order_details, sales_target = load_data()
+orders, details, targets = load_data()
 
 # --------------------------------------------------
-# Data preprocessing
+# Preprocessing
 # --------------------------------------------------
-
-# Convert Order Date to datetime (DD-MM-YYYY)
 orders["Order Date"] = pd.to_datetime(
-    orders["Order Date"],
-    format="%d-%m-%Y",
-    errors="coerce"
+    orders["Order Date"], format="%d-%m-%Y", errors="coerce"
 )
 
-# Create Month column
 orders["Month"] = orders["Order Date"].dt.to_period("M").astype(str)
 
-# Merge Orders & Order Details
-data = pd.merge(
-    orders,
-    order_details,
-    on="Order ID",
-    how="inner"
-)
+data = pd.merge(orders, details, on="Order ID", how="inner")
 
 # Standardize column name
 data = data.rename(columns={"Amount": "Sales"})
@@ -55,26 +40,21 @@ data = data.rename(columns={"Amount": "Sales"})
 # --------------------------------------------------
 st.sidebar.header("🔎 Filters")
 
-state_filter = st.sidebar.multiselect(
-    "Select State(s):",
+states = st.sidebar.multiselect(
+    "Select State(s)",
     options=sorted(data["State"].unique()),
     default=sorted(data["State"].unique())
 )
 
-filtered_data = data[data["State"].isin(state_filter)]
+filtered_data = data[data["State"].isin(states)]
 
 # --------------------------------------------------
-# KPI Metrics
+# KPIs
 # --------------------------------------------------
-total_sales = filtered_data["Sales"].sum()
-total_profit = filtered_data["Profit"].sum()
-total_orders = filtered_data["Order ID"].nunique()
-
 col1, col2, col3 = st.columns(3)
-
-col1.metric("💰 Total Sales", f"₹{total_sales:,.0f}")
-col2.metric("📈 Total Profit", f"₹{total_profit:,.0f}")
-col3.metric("🧾 Total Orders", total_orders)
+col1.metric("💰 Total Sales", f"₹{filtered_data['Sales'].sum():,.0f}")
+col2.metric("📈 Total Profit", f"₹{filtered_data['Profit'].sum():,.0f}")
+col3.metric("🧾 Total Orders", filtered_data["Order ID"].nunique())
 
 st.markdown("---")
 
@@ -83,90 +63,101 @@ st.markdown("---")
 # --------------------------------------------------
 st.subheader("📅 Monthly Sales Trend")
 
-monthly_sales = (
-    filtered_data
-    .groupby("Month")["Sales"]
-    .sum()
-    .reset_index()
-)
+monthly_sales = filtered_data.groupby("Month")["Sales"].sum().reset_index()
 
-fig1, ax1 = plt.subplots(figsize=(10, 4))
-sns.lineplot(data=monthly_sales, x="Month", y="Sales", marker="o", ax=ax1)
-ax1.set_xlabel("Month")
-ax1.set_ylabel("Sales")
-ax1.set_title("Monthly Sales Trend")
+fig, ax = plt.subplots()
+sns.lineplot(data=monthly_sales, x="Month", y="Sales", marker="o", ax=ax)
 plt.xticks(rotation=45)
-
-st.pyplot(fig1)
+st.pyplot(fig)
 
 # --------------------------------------------------
-# Sales by State
+# Top States by Sales
 # --------------------------------------------------
 st.subheader("🗺️ Top 10 States by Sales")
 
 state_sales = (
-    filtered_data
-    .groupby("State")["Sales"]
+    filtered_data.groupby("State")["Sales"]
     .sum()
     .sort_values(ascending=False)
     .head(10)
 )
 
-fig2, ax2 = plt.subplots(figsize=(8, 4))
-state_sales.plot(kind="bar", ax=ax2)
-ax2.set_xlabel("State")
-ax2.set_ylabel("Sales")
-ax2.set_title("Top 10 States by Sales")
-
-st.pyplot(fig2)
+fig, ax = plt.subplots()
+state_sales.plot(kind="bar", ax=ax)
+st.pyplot(fig)
 
 # --------------------------------------------------
 # Sales by Category
 # --------------------------------------------------
 st.subheader("📦 Sales by Category")
 
-category_sales = (
-    filtered_data
-    .groupby("Category")["Sales"]
-    .sum()
-    .sort_values(ascending=False)
-)
+category_sales = filtered_data.groupby("Category")["Sales"].sum()
 
-fig3, ax3 = plt.subplots(figsize=(8, 4))
-category_sales.plot(kind="bar", ax=ax3)
-ax3.set_xlabel("Category")
-ax3.set_ylabel("Sales")
-ax3.set_title("Category-wise Sales")
-
-st.pyplot(fig3)
+fig, ax = plt.subplots()
+category_sales.plot(kind="bar", ax=ax)
+st.pyplot(fig)
 
 # --------------------------------------------------
 # Profit by Category
 # --------------------------------------------------
 st.subheader("📊 Profit by Category")
 
-profit_by_category = (
-    filtered_data
-    .groupby("Category")["Profit"]
-    .sum()
-    .reset_index()
-)
+profit_category = filtered_data.groupby("Category")["Profit"].sum().reset_index()
 
-fig4, ax4 = plt.subplots(figsize=(8, 4))
-sns.barplot(
-    data=profit_by_category,
-    x="Category",
-    y="Profit",
-    ax=ax4
-)
-ax4.set_xlabel("Category")
-ax4.set_ylabel("Profit")
-ax4.set_title("Profit by Category")
-
-st.pyplot(fig4)
+fig, ax = plt.subplots()
+sns.barplot(data=profit_category, x="Category", y="Profit", ax=ax)
+st.pyplot(fig)
 
 # --------------------------------------------------
-# Raw Data Preview
+# Customer Behavior
+# --------------------------------------------------
+st.subheader("🧍 Customer Purchase Behavior")
+
+customer_behavior = filtered_data.groupby("Quantity")["Sales"].sum().reset_index()
+
+fig, ax = plt.subplots()
+sns.barplot(data=customer_behavior, x="Quantity", y="Sales", ax=ax)
+st.pyplot(fig)
+
+# --------------------------------------------------
+# Sales Heatmap (Category vs Month)
+# --------------------------------------------------
+st.subheader("🔥 Sales Heatmap (Category × Month)")
+
+sales_heatmap = filtered_data.pivot_table(
+    index="Category", columns="Month", values="Sales", aggfunc="sum"
+)
+
+fig, ax = plt.subplots(figsize=(10, 5))
+sns.heatmap(sales_heatmap, cmap="YlOrRd", linewidths=0.5, ax=ax)
+st.pyplot(fig)
+
+# --------------------------------------------------
+# Segment Category Heatmap (State vs Category)
+# --------------------------------------------------
+st.subheader("🧩 Segment Category Heatmap (State × Category)")
+
+segment_heatmap = filtered_data.pivot_table(
+    index="State", columns="Category", values="Sales", aggfunc="sum"
+)
+
+fig, ax = plt.subplots(figsize=(10, 6))
+sns.heatmap(segment_heatmap, cmap="Blues", linewidths=0.5, ax=ax)
+st.pyplot(fig)
+
+# --------------------------------------------------
+# Correlation Heatmap
+# --------------------------------------------------
+st.subheader("📈 Correlation Heatmap")
+
+corr = filtered_data[["Sales", "Profit", "Quantity"]].corr()
+
+fig, ax = plt.subplots()
+sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
+st.pyplot(fig)
+
+# --------------------------------------------------
+# Raw Data
 # --------------------------------------------------
 with st.expander("📄 View Raw Data"):
     st.dataframe(filtered_data.head(50))
