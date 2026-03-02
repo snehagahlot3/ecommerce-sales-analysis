@@ -3,9 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# ----------------------------
-# Page config
-# ----------------------------
+# --------------------------------------------------
+# Page configuration
+# --------------------------------------------------
 st.set_page_config(
     page_title="E-commerce Sales Analysis",
     layout="wide"
@@ -13,22 +13,23 @@ st.set_page_config(
 
 st.title("📊 E-commerce Sales Analysis Dashboard")
 
-# ----------------------------
+# --------------------------------------------------
 # Load data
-# ----------------------------
+# --------------------------------------------------
 @st.cache_data
 def load_data():
     orders = pd.read_csv("List of Orders.csv")
-    order_details = pd.read_csv("Order Details.csv")
-    sales_target = pd.read_csv("Sales target.csv")
-    return orders, order_details, sales_target
+    details = pd.read_csv("Order Details.csv")
+    targets = pd.read_csv("Sales target.csv")
+    return orders, details, targets
 
 orders, order_details, sales_target = load_data()
 
-# ----------------------------
+# --------------------------------------------------
 # Data preprocessing
-# ----------------------------
-# Convert Order Date to datetime (DD-MM-YYYY format)
+# --------------------------------------------------
+
+# Convert Order Date to datetime (DD-MM-YYYY)
 orders["Order Date"] = pd.to_datetime(
     orders["Order Date"],
     format="%d-%m-%Y",
@@ -38,7 +39,7 @@ orders["Order Date"] = pd.to_datetime(
 # Create Month column
 orders["Month"] = orders["Order Date"].dt.to_period("M").astype(str)
 
-# Merge orders with order details
+# Merge Orders & Order Details
 data = pd.merge(
     orders,
     order_details,
@@ -46,9 +47,12 @@ data = pd.merge(
     how="inner"
 )
 
-# ----------------------------
+# Standardize column name
+data = data.rename(columns={"Amount": "Sales"})
+
+# --------------------------------------------------
 # Sidebar filters
-# ----------------------------
+# --------------------------------------------------
 st.sidebar.header("🔎 Filters")
 
 state_filter = st.sidebar.multiselect(
@@ -59,9 +63,9 @@ state_filter = st.sidebar.multiselect(
 
 filtered_data = data[data["State"].isin(state_filter)]
 
-# ----------------------------
-# KPIs
-# ----------------------------
+# --------------------------------------------------
+# KPI Metrics
+# --------------------------------------------------
 total_sales = filtered_data["Sales"].sum()
 total_profit = filtered_data["Profit"].sum()
 total_orders = filtered_data["Order ID"].nunique()
@@ -74,9 +78,9 @@ col3.metric("🧾 Total Orders", total_orders)
 
 st.markdown("---")
 
-# ----------------------------
+# --------------------------------------------------
 # Monthly Sales Trend
-# ----------------------------
+# --------------------------------------------------
 st.subheader("📅 Monthly Sales Trend")
 
 monthly_sales = (
@@ -95,10 +99,10 @@ plt.xticks(rotation=45)
 
 st.pyplot(fig1)
 
-# ----------------------------
+# --------------------------------------------------
 # Sales by State
-# ----------------------------
-st.subheader("🗺️ Sales by State")
+# --------------------------------------------------
+st.subheader("🗺️ Top 10 States by Sales")
 
 state_sales = (
     filtered_data
@@ -116,9 +120,9 @@ ax2.set_title("Top 10 States by Sales")
 
 st.pyplot(fig2)
 
-# ----------------------------
-# Category-wise Sales
-# ----------------------------
+# --------------------------------------------------
+# Sales by Category
+# --------------------------------------------------
 st.subheader("📦 Sales by Category")
 
 category_sales = (
@@ -136,15 +140,23 @@ ax3.set_title("Category-wise Sales")
 
 st.pyplot(fig3)
 
-# ----------------------------
+# --------------------------------------------------
 # Profit by Category
-# ----------------------------
+# --------------------------------------------------
 st.subheader("📊 Profit by Category")
+
+profit_by_category = (
+    filtered_data
+    .groupby("Category")["Profit"]
+    .sum()
+    .reset_index()
+)
 
 fig4, ax4 = plt.subplots(figsize=(8, 4))
 sns.barplot(
-    x=category_sales.index,
-    y=filtered_data.groupby("Category")["Profit"].sum().values,
+    data=profit_by_category,
+    x="Category",
+    y="Profit",
     ax=ax4
 )
 ax4.set_xlabel("Category")
@@ -153,10 +165,8 @@ ax4.set_title("Profit by Category")
 
 st.pyplot(fig4)
 
-# ----------------------------
+# --------------------------------------------------
 # Raw Data Preview
-# ----------------------------
+# --------------------------------------------------
 with st.expander("📄 View Raw Data"):
-    st.dataframe(filtered_data.head(50))
-    
     st.dataframe(filtered_data.head(50))
