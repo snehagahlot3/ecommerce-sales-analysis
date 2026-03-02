@@ -166,6 +166,7 @@ jupyter notebook
 Open `ecommerce_sales_analysis.ipynb` and run **Kernel → Restart & Run All**
 
 ---
+**LIVE APP LINK:** [click here](https://sneha-ecommerce-sales-analysis.streamlit.app/)
 
 ## 🤝 Connect
 
